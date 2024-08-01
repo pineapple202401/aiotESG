@@ -1,0 +1,158 @@
+<html><head><base href="https://websim.ai/linear-regression-simulator/"><title>Simple Linear Regression Simulator Web App - Fixed</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+<style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; display: flex; }
+    #controls { width: 300px; padding-right: 20px; }
+    #chart-container { flex-grow: 1; }
+    canvas { max-width: 100%; }
+    input[type="range"] { width: 100%; }
+</style>
+</head>
+<body>
+<div id="controls">
+    <h2>Simulation Parameters</h2>
+    <label for="a">Coefficient (a): <span id="a-value">1</span></label>
+    <input type="range" id="a" min="-50" max="50" step="0.1" value="1">
+    
+    <label for="n">Number of points (n): <span id="n-value">500</span></label>
+    <input type="range" id="n" min="100" max="1000" step="1" value="500">
+    
+    <label for="c">Noise factor (c): <span id="c-value">20</span></label>
+    <input type="range" id="c" min="10" max="100" step="1" value="20">
+    
+    <h3>Results</h3>
+    <p>True coefficient (a): <span id="true-a"></span></p>
+    <p>Estimated coefficient: <span id="est-a"></span></p>
+    <p>Estimated intercept: <span id="est-b"></span></p>
+</div>
+<div id="chart-container">
+    <canvas id="regressionChart"></canvas>
+</div>
+
+<script>
+let chart;
+let trueA, estA, estB;
+
+function generateData(a, n, c) {
+    const x = Array.from({length: n}, () => math.random(-10, 10));
+    const y = x.map(xi => a * xi + c * math.random('normal'));
+    return {x, y};
+}
+
+function linearRegression(x, y) {
+    const n = x.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    for (let i = 0; i < n; i++) {
+        sumX += x[i];
+        sumY += y[i];
+        sumXY += x[i] * y[i];
+        sumX2 += x[i] * x[i];
+    }
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return {slope, intercept};
+}
+
+function updateChart() {
+    const a = parseFloat(document.getElementById('a').value);
+    const n = parseInt(document.getElementById('n').value);
+    const c = parseFloat(document.getElementById('c').value);
+    
+    const {x, y} = generateData(a, n, c);
+    const {slope, intercept} = linearRegression(x, y);
+    
+    trueA = a;
+    estA = slope;
+    estB = intercept;
+    
+    const predictedY = x.map(xi => slope * xi + intercept);
+    
+    chart.data.datasets[0].data = x.map((xi, i) => ({x: xi, y: y[i]}));
+    chart.data.datasets[1].data = [
+        {x: Math.min(...x), y: slope * Math.min(...x) + intercept},
+        {x: Math.max(...x), y: slope * Math.max(...x) + intercept}
+    ];
+    chart.update();
+    
+    document.getElementById('true-a').textContent = a.toFixed(4);
+    document.getElementById('est-a').textContent = slope.toFixed(4);
+    document.getElementById('est-b').textContent = intercept.toFixed(4);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    chart = new Chart('regressionChart', {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Data Points',
+                data: [],
+                backgroundColor: 'rgba(0, 123, 255, 0.5)'
+            }, {
+                label: 'Regression Line',
+                data: [],
+                type: 'line',
+                borderColor: 'red',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            title: {
+                display: true,
+                text: 'Simple Linear Regression'
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: 'X'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Y'
+                    }
+                }
+            }
+        }
+    });
+    
+    updateChart();
+    
+    ['a', 'n', 'c'].forEach(id => {
+        const input = document.getElementById(id);
+        const value = document.getElementById(`${id}-value`);
+        input.addEventListener('input', () => {
+            value.textContent = input.value;
+            updateChart();
+        });
+    });
+});
+</script>
+
+<h2>How to Use</h2>
+<ol>
+    <li>Adjust the sliders to change the simulation parameters:
+        <ul>
+            <li>Coefficient (a): The true slope of the line</li>
+            <li>Number of points (n): The number of data points to generate</li>
+            <li>Noise factor (c): Controls the amount of noise added to the data</li>
+        </ul>
+    </li>
+    <li>The scatter plot shows the generated data points (blue) and the estimated regression line (red).</li>
+    <li>The 'Results' section displays the true coefficient and the estimated coefficient and intercept.</li>
+    <li>Experiment with different parameter values to see how they affect the regression results.</li>
+</ol>
+
+<script>
+// Add this script to ensure the chart updates when sliders change
+document.querySelectorAll('input[type="range"]').forEach(input => {
+    input.addEventListener('input', updateChart);
+});
+</script>
+
+</body></html>
